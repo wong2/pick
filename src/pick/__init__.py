@@ -48,6 +48,22 @@ class Picker(Generic[OPTION_T]):
             )
 
         self.index = self.default_index
+        self.parse_options()
+
+    def parse_options(self) -> None:
+        if isinstance(self.options, dict):
+            options: List[str] = []
+            descriptions: List[str] = []
+
+            for option in self.options.keys():
+                options.append(option)
+                descriptions.append(self.options[option])
+
+            self.options = options
+            self.descriptions = descriptions
+
+        else:
+            self.descriptions = None
 
     def move_up(self) -> None:
         self.index -= 1
@@ -111,6 +127,26 @@ class Picker(Generic[OPTION_T]):
         current_line = self.index + len(title_lines) + 1
         return lines, current_line
 
+    def get_description_lines(self, length) -> List[str]:
+        description = self.descriptions[self.index]
+        description_words = description.split(" ")
+        description_lines: List[str] = []
+
+        line = ""
+        for i, word in enumerate(description_words):
+            if len(line + " " + word) <= length:
+                if i == 0:
+                    line += word
+                else:
+                    line += " " + word
+            else:
+                description_lines.append(line)
+                line = word
+
+        description_lines.append(line)
+
+        return description_lines
+
     def draw(self, screen: "curses._CursesWindow") -> None:
         """draw the curses ui on the screen, handle scroll if needed"""
         screen.clear()
@@ -129,8 +165,14 @@ class Picker(Generic[OPTION_T]):
         lines_to_draw = lines[scroll_top : scroll_top + max_rows]
 
         for line in lines_to_draw:
-            screen.addnstr(y, x, line, max_x - 2)
+            screen.addnstr(y, x, line, max_x//2 - 2)
             y += 1
+
+        if self.descriptions:
+            description_lines = self.get_description_lines(max_x//2)
+
+            for i, line in enumerate(description_lines):
+                screen.addstr(i + 3, max_x//2, line, 2 * max_x//2 - 2)
 
         screen.refresh()
 
